@@ -27,4 +27,26 @@ local Window = Rayfield:CreateWindow({
 })
 
 local MainTab = Window:CreateTab("🏠Home") -- Title, Image
-local MainSection = Tab:CreateSection("Main")
+local MainSection = Maintab:CreateSection("Main")
+
+Rayfield:Notify({
+    Title = "Você executou o script!",
+    Content = "💠 MainV3",
+    Duration = 3.5,
+    Image = 4483362458,
+    Actions = {
+        Ignore = {
+            Name = "Okay!",
+            Callback = function()
+                print("The user tapped Okay!")
+            end
+        },
+    },
+})
+
+local Button = MainTab:CreateButton({
+   Name = "Aimbot🎯",
+   Callback = function()
+   -- The function that takes place when the button is pressed
+   end,
+})
