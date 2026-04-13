@@ -1,21 +1,16 @@
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
+local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+gui.Name = "MainV3_UI"
+gui.ResetOnSpawn = false
 
 local Aimbot = require(game.ReplicatedStorage:WaitForChild("Aimbot"))
 local ESP = require(game.ReplicatedStorage:WaitForChild("ESP"))
 
-local Menu = {}
-
-local gui = Instance.new("ScreenGui", playerGui)
-gui.Name = "MainV3_UI"
-gui.ResetOnSpawn = false
-
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 220, 0, 180)
-frame.Position = UDim2.new(0, 20, 0, 100)
+frame.Size = UDim2.new(0,220,0,180)
+frame.Position = UDim2.new(0,20,0,100)
 frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
 
 local title = Instance.new("TextLabel", frame)
@@ -40,23 +35,24 @@ closeBtn.Text = "X"
 local function update()
     aimbotBtn.Text = "Aimbot: " .. (Aimbot.Enabled and "ON" or "OFF")
     espBtn.Text = "ESP: " .. (ESP.Enabled and "ON" or "OFF")
+
+    aimbotBtn.BackgroundColor3 = Aimbot.Enabled and Color3.fromRGB(0,170,0) or Color3.fromRGB(170,0,0)
+    espBtn.BackgroundColor3 = ESP.Enabled and Color3.fromRGB(0,170,0) or Color3.fromRGB(170,0,0)
 end
 
 aimbotBtn.MouseButton1Click:Connect(function()
     Aimbot.Enabled = not Aimbot.Enabled
-    update()
 end)
 
 espBtn.MouseButton1Click:Connect(function()
     ESP.Enabled = not ESP.Enabled
-    update()
 end)
 
 closeBtn.MouseButton1Click:Connect(function()
     frame.Visible = not frame.Visible
 end)
 
--- DRAG
+-- DRAG FIXED
 local dragging = false
 local dragStart, startPos
 
@@ -74,7 +70,7 @@ frame.InputEnded:Connect(function(input)
     end
 end)
 
-UserInputService.InputChanged:Connect(function(input)
+frame.InputChanged:Connect(function(input)
     if dragging and input.UserInputType == Enum.UserInputType.Touch then
         local delta = input.Position - dragStart
         frame.Position = UDim2.new(
@@ -86,6 +82,7 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
-update()
+-- AUTO UPDATE
+game:GetService("RunService").RenderStepped:Connect(update)
 
-return Menu
+return {}
