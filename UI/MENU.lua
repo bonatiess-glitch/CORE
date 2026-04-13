@@ -9,68 +9,54 @@ local ESP = require(game.ReplicatedStorage:WaitForChild("ESP"))
 
 local Menu = {}
 
--- Criar GUI
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "MainV3_UI"
-screenGui.ResetOnSpawn = false
-screenGui.Parent = playerGui
+local gui = Instance.new("ScreenGui", playerGui)
+gui.Name = "MainV3_UI"
+gui.ResetOnSpawn = false
 
-local frame = Instance.new("Frame")
+local frame = Instance.new("Frame", gui)
 frame.Size = UDim2.new(0, 220, 0, 180)
 frame.Position = UDim2.new(0, 20, 0, 100)
-frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-frame.Parent = screenGui
+frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
 
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 30)
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1,0,0,30)
 title.Text = "MainV3 Mobile"
-title.TextColor3 = Color3.fromRGB(0,255,0)
 title.BackgroundTransparency = 1
-title.Parent = frame
+title.TextColor3 = Color3.fromRGB(0,255,0)
 
--- BOTÃO AIMBOT
-local aimbotBtn = Instance.new("TextButton")
-aimbotBtn.Size = UDim2.new(1, -20, 0, 40)
-aimbotBtn.Position = UDim2.new(0, 10, 0, 40)
-aimbotBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
-aimbotBtn.Parent = frame
+local aimbotBtn = Instance.new("TextButton", frame)
+aimbotBtn.Size = UDim2.new(1,-20,0,40)
+aimbotBtn.Position = UDim2.new(0,10,0,40)
 
--- BOTÃO ESP
-local espBtn = Instance.new("TextButton")
-espBtn.Size = UDim2.new(1, -20, 0, 40)
-espBtn.Position = UDim2.new(0, 10, 0, 90)
-espBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
-espBtn.Parent = frame
+local espBtn = Instance.new("TextButton", frame)
+espBtn.Size = UDim2.new(1,-20,0,40)
+espBtn.Position = UDim2.new(0,10,0,90)
 
--- FECHAR
-local closeBtn = Instance.new("TextButton")
-closeBtn.Size = UDim2.new(0, 30, 0, 30)
-closeBtn.Position = UDim2.new(1, -35, 0, 0)
+local closeBtn = Instance.new("TextButton", frame)
+closeBtn.Size = UDim2.new(0,30,0,30)
+closeBtn.Position = UDim2.new(1,-35,0,0)
 closeBtn.Text = "X"
-closeBtn.Parent = frame
 
--- Atualizar texto
-local function updateButtons()
+local function update()
     aimbotBtn.Text = "Aimbot: " .. (Aimbot.Enabled and "ON" or "OFF")
     espBtn.Text = "ESP: " .. (ESP.Enabled and "ON" or "OFF")
 end
 
--- Eventos
 aimbotBtn.MouseButton1Click:Connect(function()
     Aimbot.Enabled = not Aimbot.Enabled
-    updateButtons()
+    update()
 end)
 
 espBtn.MouseButton1Click:Connect(function()
     ESP.Enabled = not ESP.Enabled
-    updateButtons()
+    update()
 end)
 
 closeBtn.MouseButton1Click:Connect(function()
     frame.Visible = not frame.Visible
 end)
 
--- DRAG (arrastar no mobile)
+-- DRAG
 local dragging = false
 local dragStart, startPos
 
@@ -100,6 +86,6 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
-updateButtons()
+update()
 
 return Menu
