@@ -1,9 +1,7 @@
-local Window = Rayfield:CreateWindow({
-    local MarketplaceService = game:GetService("MarketplaceService")
-local GameInfo = MarketplaceService:GetProductInfo(game.PlaceId)
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-    Name = GameInfo.Name .. " Script 🧪",
+    Name = "💠 Universal Aimbot",
     LoadingTitle = "💠 Universal Aimbot",
     LoadingSubtitle = "by 1_F0",
     ConfigurationSaving = {
