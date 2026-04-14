@@ -45,8 +45,11 @@ Rayfield:Notify({
 })
 
 local Button = MainTab:CreateButton({
-   Name = "Aimbot🎯",
+   Name = "Aimbot 🎯",
    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/bonatzz/Aim.lua/refs/heads/main/Core.lua"))()
+   end,
+})
    
 local Slider = MainTab:CreateSlider({
    Name = "Walkspeed",
