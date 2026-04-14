@@ -59,13 +59,15 @@ local esp_cache = {}
 
 local function createESP(player)
     if player == Players.LocalPlayer then return end
+    if not player.Character then return end
     if esp_cache[player] then return end
 
     local hl = Instance.new("Highlight")
     hl.FillColor = Color3.fromRGB(255, 0, 255)
     hl.OutlineColor = Color3.fromRGB(255, 0, 255)
     hl.FillTransparency = 0.6
-    hl.Parent = player.Character
+    hl.Adornee = player.Character:FindFirstChild("HumanoidRootPart")
+    hl.Parent = game.CoreGui
 
     esp_cache[player] = hl
 end
