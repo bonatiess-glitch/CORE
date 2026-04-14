@@ -4,33 +4,120 @@ local Window = Rayfield:CreateWindow({
     Name = "💠 Universal Aimbot",
     LoadingTitle = "💠 Universal Aimbot",
     LoadingSubtitle = "by 1_F0",
-    ConfigurationSaving = {
-        Enabled = false,
-        FolderName = nil,
-        FileName = "Youtubeexamplehub"
-    },
-    Discord = {
-        Enabled = false,
-        Invite = "vegax",
-        RememberJoins = true
-    },
+    ConfigurationSaving = {Enabled = false},
     KeySystem = false
 })
 
+-- ABAS
 local MainTab = Window:CreateTab("🏠Home")
-local MainSection = MainTab:CreateSection("Main") -- corrigido
+local ConfigTab = Window:CreateTab("⚙️Config")
 
-Rayfield:Notify({
-    Title = "Você executou o script!",
-    Content = "💠 MainV3",
-    Duration = 6.5,
-    Image = 4483362458
+-- ==================== SERVIÇOS ====================
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local Cam = game.Workspace.CurrentCamera
+
+-- ==================== TOGGLES ====================
+local AIMBOT_ATIVO = false
+local ESP_ATIVO = false
+
+-- ==================== CONFIG ====================
+getgenv().AIM_FOV = 50
+getgenv().AIM_SMOOTH = 0.2 -- 🔥 NOVO
+
+-- ==================== AIMBOT ====================
+local function getClosestPlayerInFOV()
+    local nearest = nil
+    local last = math.huge
+    local center = Cam.ViewportSize / 2
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= Players.LocalPlayer then
+            local part = player.Character and player.Character:FindFirstChild("Head")
+            if part then
+                local pos, visible = Cam:WorldToViewportPoint(part.Position)
+                local dist = (Vector2.new(pos.x, pos.y) - center).Magnitude
+
+                if dist < last and visible and dist < getgenv().AIM_FOV then
+                    last = dist
+                    nearest = player
+                end
+            end
+        end
+    end
+
+    return nearest
+end
+
+local function aimAt(target)
+    local cf = CFrame.new(Cam.CFrame.Position, target)
+    Cam.CFrame = Cam.CFrame:Lerp(cf, getgenv().AIM_SMOOTH) -- 🔥 ALTERADO
+end
+
+-- ==================== ESP ====================
+local esp_cache = {}
+
+local function createESP(player)
+    if player == Players.LocalPlayer then return end
+    if esp_cache[player] then return end
+
+    local hl = Instance.new("Highlight")
+    hl.FillColor = Color3.fromRGB(255, 0, 255)
+    hl.OutlineColor = Color3.fromRGB(255, 0, 255)
+    hl.FillTransparency = 0.6
+    hl.Parent = player.Character
+
+    esp_cache[player] = hl
+end
+
+local function removeESP(player)
+    if esp_cache[player] then
+        esp_cache[player]:Destroy()
+        esp_cache[player] = nil
+    end
+end
+
+-- ==================== LOOP ====================
+RunService.RenderStepped:Connect(function()
+
+    -- AIMBOT
+    if AIMBOT_ATIVO then
+        local target = getClosestPlayerInFOV()
+        if target and target.Character and target.Character:FindFirstChild("Head") then
+            aimAt(target.Character.Head.Position)
+        end
+    end
+
+    -- ESP
+    if ESP_ATIVO then
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player.Character then
+                createESP(player)
+            end
+        end
+    else
+        for player in pairs(esp_cache) do
+            removeESP(player)
+        end
+    end
+
+end)
+
+-- ==================== HOME ====================
+
+MainTab:CreateToggle({
+   Name = "Aimbot 🎯",
+   CurrentValue = false,
+   Callback = function(Value)
+        AIMBOT_ATIVO = Value
+   end,
 })
 
-MainTab:CreateButton({
-   Name = "Aimbot 🎯",
-   Callback = function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/bonatzz/Aim.lua/refs/heads/main/Core.lua"))()
+MainTab:CreateToggle({
+   Name = "ESP 👁️",
+   CurrentValue = false,
+   Callback = function(Value)
+        ESP_ATIVO = Value
    end,
 })
 
@@ -38,10 +125,35 @@ MainTab:CreateSlider({
    Name = "Walkspeed",
    Range = {0, 300},
    Increment = 1,
-   Suffix = "Speed",
    CurrentValue = 16,
-   Flag = "Slider1",
    Callback = function(Value)
         game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value
    end,
 })
+
+-- ==================== CONFIG ====================
+
+ConfigTab:CreateSection("Aimbot")
+
+ConfigTab:CreateSlider({
+   Name = "FOV",
+   Range = {10, 300},
+   Increment = 1,
+   CurrentValue = 50,
+   Callback = function(Value)
+        getgenv().AIM_FOV = Value
+   end,
+})
+
+-- 🔥 NOVO SLIDER
+ConfigTab:CreateSlider({
+   Name = "Smooth",
+   Range = {1, 100},
+   Increment = 1,
+   CurrentValue = 20,
+   Callback = function(Value)
+        getgenv().AIM_SMOOTH = Value / 100
+   end,
+})
+
+print("Hub carregado com sucesso")
