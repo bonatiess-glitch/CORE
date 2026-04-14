@@ -2,9 +2,9 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-	Name = "💠 Universal Aimbot V3",
-	LoadingTitle = "💠 Universal Aimbot V3",
-	LoadingSubtitle = "by 1_F0 | Melhorado",
+	Name = "💠 UniversalAim V2",
+	LoadingTitle = "💠 Universal AimV2",
+	LoadingSubtitle = "by Zeppelin | Go! Go!",
 	ConfigurationSaving = {Enabled = false},
 	KeySystem = false
 })
@@ -27,10 +27,8 @@ local AIMBOT_ATIVO = false
 local ESP_ATIVO = false
 local NOCLIP = false
 local FULLBRIGHT_ATIVO = false
-local ANTI_AFK = false
 local INFINITE_JUMP = false
 local TARGET_LOCK = false
-local ANTI_OBSERVADOR_ATIVO = true -- Sempre ativo
 
 -- ==================== CONFIG ====================
 getgenv().AIM_FOV = 50
@@ -44,91 +42,53 @@ getgenv().TEAM_CHECK = false
 -- ==================== CACHE ====================
 local esp_cache = {}
 local last_noclip_time = 0
+local last_observer_check = 0
 local observador_detectado = false
-local camera_original = nil
 
--- ==================== LIMPEZA DE RASTROS ====================
+-- ==================== LIMPEZA DE RASTROS (SIMPLES) ====================
 local function limparRastros()
-	-- Remove funções globais que poderiam indicar script
-	if getgenv().AIMBOT_ATIVO then
+	-- Remove só as variáveis suspeitas
+	pcall(function()
 		getgenv().AIMBOT_ATIVO = nil
-	end
+		getgenv().ESP_ATIVO = nil
+		getgenv().AIM_FOV = nil
+		getgenv().AIM_SMOOTH = nil
+	end)
 	
-	-- Limpa variáveis de ambiente
-	for k, v in pairs(getgenv()) do
-		if type(v) == "function" or type(v) == "table" then
-			if k:find("AIMBOT") or k:find("ESP") or k:find("SCRIPT") then
-				pcall(function()
-					getgenv()[k] = nil
-				end)
-			end
-		end
-	end
+	print("✅ Rastros limpos")
 end
 
--- ==================== DETECTOR DE OBSERVADORES ====================
+-- ==================== DETECTOR DE OBSERVADORES (LEVE) ====================
 local function detectarObservador()
-	-- Verifica se há câmera focando no player (Dev/Admin observando)
-	local playerChar = Players.LocalPlayer.Character
-	if not playerChar then return false end
+
+	local currentTime = tick()
+	if currentTime - last_observer_check < 5 then
+		return observador_detectado
+	end
+	last_observer_check = currentTime
 	
-	-- Lista de possíveis nomes de admin/dev que observam
-	local noMesSuspeitos = {
-		"Admin", "Moderator", "Developer", "Owner", "Staff",
-		"Observer", "Spectator", "Camera", "Cam", "Observador"
-	}
+	local nomesAdmin = {"Admin", "Developer", "Owner", "Moderator"}
 	
-	-- Verifica todos os players em espectador (mortos)
 	for _, player in ipairs(Players:GetPlayers()) do
-		if player ~= Players.LocalPlayer then
-			local char = player.Character
-			-- Se um player não tem character, pode estar em espectador
-			if not char then
-				-- Verifica se é um dos nomes suspeitos
-				for _, suspeito in ipairs(noMesSuspeitos) do
-					if player.Name:find(suspeito) or player.Name:find(player.Name:upper()) then
-						return true, player.Name
-					end
+		if player ~= Players.LocalPlayer and not player.Character then
+			for _, nome in ipairs(nomesAdmin) do
+				if player.Name:find(nome) then
+					observador_detectado = true
+					return true
 				end
 			end
 		end
 	end
 	
-	-- Verifica distância anormal de câmera
-	local cameraPos = Cam.CFrame.Position
-	local playerPos = playerChar:FindFirstChild("Head")
-	if playerPos then
-		local dist = (cameraPos - playerPos.Position).Magnitude
-		-- Se câmera tá muito perto e não é primeira pessoa, pode ser observador
-		if dist < 5 and dist > 0.1 then
-			return true, "Unknown Observer"
-		end
-	end
-	
+	observador_detectado = false
 	return false
 end
 
--- ==================== AUTO-PAUSE AIMBOT ====================
-local function verificarObservadorEPausar()
-	if not ANTI_OBSERVADOR_ATIVO then return end
-	
-	local detectado, nome = detectarObservador()
-	
-	if detectado and AIMBOT_ATIVO then
-		observador_detectado = true
+-- ==================== AUTO-PAUSE (SUAVE) ====================
+local function verificarEPausar()
+	if detectarObservador() and AIMBOT_ATIVO then
 		AIMBOT_ATIVO = false
-		print("⚠️ OBSERVADOR DETECTADO: " .. (nome or "Unknown"))
-		print("🔒 Aimbot pausado automaticamente!")
-		
-		Rayfield:Notify({
-			Title = "⚠️ OBSERVADOR DETECTADO!",
-			Content = "Aimbot pausado. Observador: " .. (nome or "Unknown"),
-			Duration = 3,
-			Image = 4483362458,
-		})
-	elseif not detectado and observador_detectado then
-		observador_detectado = false
-		print("✅ Observador desapareceu. Aimbot pode ser ativado novamente.")
+		print("⚠️ Admin detectado. Aimbot pausado.")
 	end
 end
 
@@ -258,11 +218,10 @@ end
 -- ==================== MAIN LOOP ====================
 RunService.RenderStepped:Connect(function()
 
-	-- VERIFICAR OBSERVADOR A CADA FRAME
-	verificarObservadorEPausar()
-
 	-- AIMBOT
 	if AIMBOT_ATIVO then
+		verificarEPausar()
+		
 		local target = nil
 		
 		if TARGET_LOCK and getgenv().LOCKED_TARGET and getgenv().LOCKED_TARGET.Character then
@@ -289,7 +248,7 @@ RunService.RenderStepped:Connect(function()
 		end
 	end
 
-	-- NOCLIP (otimizado - roda a cada 0.1s)
+	-- Noclip
 	if NOCLIP then
 		local currentTime = tick()
 		if currentTime - last_noclip_time >= 0.1 then
@@ -357,28 +316,20 @@ ConfigTab:CreateToggle({
 
 ConfigTab:CreateSection("🛡️ Proteção")
 
-ConfigTab:CreateToggle({
-	Name = "🔍 Anti-Observador",
-	CurrentValue = true,
-	Callback = function(Value)
-		ANTI_OBSERVADOR_ATIVO = Value
-	end,
-})
-
 ConfigTab:CreateButton({
 	Name = "🧹 Limpar Rastros",
 	Callback = function()
 		limparRastros()
 		Rayfield:Notify({
 			Title = "✅ Rastros Limpos!",
-			Content = "Variáveis de script removidas",
+			Content = "Variáveis removidas do getenv",
 			Duration = 2,
 			Image = 4483362458,
 		})
 	end,
 })
 
-ConfigTab:CreateSection("📊 Players")
+ConfigTab:CreateSection("🎮 Players")
 
 ConfigTab:CreateDropdown({
 	Name = "Select Target",
@@ -467,10 +418,9 @@ MiscTab:CreateToggle({
 
 -- ==================== FINALIZACAO ====================
 print("✅ Hub carregada com sucesso!")
-print("🛡️ Anti-Observador: ATIVO")
 Rayfield:Notify({
 	Title = "✅ Hub Carregada!",
-	Content = "Universal Aimbot V3 - Com Proteção Anti-Observador",
+	Content = "Universal Aimbot V3 - Otimizado",
 	Duration = 5,
 	Image = 4483362458,
 })
