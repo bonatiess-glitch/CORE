@@ -30,7 +30,6 @@ local FULLBRIGHT_ATIVO = false
 local ANTI_AFK = false
 local INFINITE_JUMP = false
 local TARGET_LOCK = false
-local FOV_CIRCLE_ATIVO = false
 
 -- ==================== CONFIG ====================
 getgenv().AIM_FOV = 50
@@ -39,11 +38,11 @@ getgenv().LOCKED_TARGET = nil
 getgenv().ORIGINAL_BRIGHTNESS = nil
 getgenv().ORIGINAL_CLOCK_TIME = nil
 getgenv().ORIGINAL_FOG_END = nil
-getgenv().MOUSE_SENSITIVITY = 1
 getgenv().TEAM_CHECK = false
 
 -- ==================== CACHE ====================
 local esp_cache = {}
+local noclip_loop = nil
 
 -- ==================== AIMBOT ====================
 local function getClosestPlayerInFOV()
@@ -56,7 +55,6 @@ local function getClosestPlayerInFOV()
 			local char = player.Character
 			if not char then continue end
 			
-			-- TEAM CHECK
 			if getgenv().TEAM_CHECK and Players.LocalPlayer.Team == player.Team then
 				continue
 			end
@@ -64,7 +62,7 @@ local function getClosestPlayerInFOV()
 			local part = char:FindFirstChild("Head")
 			if part then
 				local pos, visible = Cam:WorldToViewportPoint(part.Position)
-				local dist = (Vector2.new(pos.X, pos.Y) - center).Magnitude
+				local dist = (Vector2.new(pos.x, pos.y) - center).Magnitude
 
 				if dist < last and visible and dist < getgenv().AIM_FOV then
 					last = dist
@@ -88,18 +86,13 @@ end
 local function createESP(player)
 	if player == Players.LocalPlayer then return end
 	if not player.Character then return end
-
-	if esp_cache[player] and esp_cache[player].Parent then
-		esp_cache[player].Adornee = player.Character
-		return
-	end
+	if esp_cache[player] then return end
 
 	local hl = Instance.new("Highlight")
 	hl.FillColor = Color3.fromRGB(255, 0, 255)
 	hl.OutlineColor = Color3.fromRGB(255, 0, 255)
 	hl.FillTransparency = 0.6
-	hl.Adornee = player.Character
-	hl.Parent = game.CoreGui
+	hl.Parent = player.Character
 
 	esp_cache[player] = hl
 end
@@ -108,23 +101,6 @@ local function removeESP(player)
 	if esp_cache[player] then
 		esp_cache[player]:Destroy()
 		esp_cache[player] = nil
-	end
-end
-
--- ==================== FOV CIRCLE ====================
-local fov_circle = Drawing.new("Circle")
-fov_circle.Visible = false
-fov_circle.Thickness = 2
-fov_circle.Color = Color3.fromRGB(0, 255, 0)
-fov_circle.Filled = false
-
-local function updateFOVCircle()
-	if FOV_CIRCLE_ATIVO then
-		fov_circle.Position = Cam.ViewportSize / 2
-		fov_circle.Radius = getgenv().AIM_FOV
-		fov_circle.Visible = true
-	else
-		fov_circle.Visible = false
 	end
 end
 
@@ -149,17 +125,6 @@ local function disableFullbright()
 	end
 end
 
--- ==================== ANTI AFK ====================
-local vu = game:GetService("VirtualUser")
-
-Players.LocalPlayer.Idled:Connect(function()
-	if ANTI_AFK then
-		vu:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-		task.wait(1)
-		vu:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-	end
-end)
-
 -- ==================== INFINITE JUMP ====================
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if gameProcessed then return end
@@ -171,23 +136,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		end
 	end
 end)
-
--- ==================== MOUSE SENSITIVITY ====================
-local mouse = Players.LocalPlayer:GetMouse()
-local lastMousePos = mouse.UnitRay.Direction
-local cameraOffsetX = 0
-local cameraOffsetY = 0
-
--- ==================== PLAYER LIST UPDATE ====================
-local function updatePlayerList()
-	local players = {}
-	for _, player in ipairs(Players:GetPlayers()) do
-		if player ~= Players.LocalPlayer then
-			table.insert(players, player.Name)
-		end
-	end
-	return players
-end
 
 -- ==================== PLAYER EVENTS ====================
 Players.PlayerAdded:Connect(function(player)
@@ -248,7 +196,7 @@ RunService.RenderStepped:Connect(function()
 		end
 	end
 
-	-- NOCLIP
+	-- NOCLIP (otimizado - roda MENOS)
 	if NOCLIP then
 		local char = Players.LocalPlayer.Character
 		if char then
@@ -258,28 +206,6 @@ RunService.RenderStepped:Connect(function()
 				end
 			end
 		end
-	end
-
-	-- FOV CIRCLE
-	updateFOVCircle()
-
-	-- MOUSE SENSITIVITY
-	if getgenv().MOUSE_SENSITIVITY > 1 and not AIMBOT_ATIVO then
-		local currentMousePos = mouse.UnitRay.Direction
-		local mouseDelta = currentMousePos - lastMousePos
-		
-		cameraOffsetX = cameraOffsetX + mouseDelta.X * (getgenv().MOUSE_SENSITIVITY - 1) * 0.05
-		cameraOffsetY = cameraOffsetY + mouseDelta.Y * (getgenv().MOUSE_SENSITIVITY - 1) * 0.05
-		
-		cameraOffsetX = math.clamp(cameraOffsetX, -0.5, 0.5)
-		cameraOffsetY = math.clamp(cameraOffsetY, -0.5, 0.5)
-		
-		Cam.CFrame = Cam.CFrame * CFrame.new(cameraOffsetX * 0.01, cameraOffsetY * 0.01, 0)
-		
-		lastMousePos = currentMousePos
-	else
-		cameraOffsetX = 0
-		cameraOffsetY = 0
 	end
 
 end)
@@ -332,19 +258,19 @@ ConfigTab:CreateToggle({
 	end,
 })
 
-ConfigTab:CreateToggle({
-	Name = "⭕ FOV Circle",
-	CurrentValue = false,
-	Callback = function(Value)
-		FOV_CIRCLE_ATIVO = Value
-	end,
-})
-
 ConfigTab:CreateSection("📊 Players")
 
 ConfigTab:CreateDropdown({
 	Name = "Select Target",
-	Options = updatePlayerList(),
+	Options = (function()
+		local players = {}
+		for _, player in ipairs(Players:GetPlayers()) do
+			if player ~= Players.LocalPlayer then
+				table.insert(players, player.Name)
+			end
+		end
+		return players
+	end)(),
 	CurrentOption = {"None"},
 	MultipleOptions = false,
 	Flag = "TargetDropdown",
@@ -368,18 +294,6 @@ ConfigTab:CreateToggle({
 	CurrentValue = false,
 	Callback = function(Value)
 		TARGET_LOCK = Value
-	end,
-})
-
-ConfigTab:CreateButton({
-	Name = "🔄 Atualizar Players",
-	Callback = function()
-		Rayfield:Notify({
-			Title = "✅ Atualizado!",
-			Content = "Lista de players atualizada!",
-			Duration = 2,
-			Image = 4483362458,
-		})
 	end,
 })
 
@@ -407,18 +321,6 @@ PlayerTab:CreateToggle({
 	end,
 })
 
-PlayerTab:CreateSection("🎮 Sensibilidade")
-
-PlayerTab:CreateSlider({
-	Name = "📱 Mouse Sensitivity",
-	Range = {1, 5},
-	Increment = 0.1,
-	CurrentValue = 1,
-	Callback = function(Value)
-		getgenv().MOUSE_SENSITIVITY = Value
-	end,
-})
-
 -- ==================== MISC TAB ====================
 MiscTab:CreateSection("🎮 Utilities")
 
@@ -440,23 +342,6 @@ MiscTab:CreateToggle({
 		else
 			disableFullbright()
 		end
-	end,
-})
-
-MiscTab:CreateToggle({
-	Name = "💤 Anti-AFK",
-	CurrentValue = false,
-	Callback = function(Value)
-		ANTI_AFK = Value
-	end,
-})
-
-MiscTab:CreateButton({
-	Name = "🚀 FPS Boost",
-	Callback = function()
-		game:GetService("RunService"):Set3dRenderingEnabled(false)
-		task.wait(0.1)
-		game:GetService("RunService"):Set3dRenderingEnabled(true)
 	end,
 })
 
