@@ -55,17 +55,24 @@ local function aimAt(target)
 end
 
 -- ==================== ESP ====================
+
 local esp_cache = {}
 
 local function createESP(player)
     if player == Players.LocalPlayer then return end
-    if esp_cache[player] then return end
+    if not player.Character then return end
+
+    if esp_cache[player] and esp_cache[player].Parent then
+        esp_cache[player].Adornee = player.Character
+        return
+    end
 
     local hl = Instance.new("Highlight")
     hl.FillColor = Color3.fromRGB(255, 0, 255)
     hl.OutlineColor = Color3.fromRGB(255, 0, 255)
     hl.FillTransparency = 0.6
-    hl.Parent = player.Character
+    hl.Adornee = player.Character
+    hl.Parent = game.CoreGui
 
     esp_cache[player] = hl
 end
@@ -75,6 +82,26 @@ local function removeESP(player)
         esp_cache[player]:Destroy()
         esp_cache[player] = nil
     end
+end
+
+-- RESPAWN FIX
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function()
+        task.wait(0.5)
+        if ESP_ATIVO then
+            createESP(player)
+        end
+    end)
+end)
+
+-- REJOIN FIX (quem já está no servidor)
+for _, player in ipairs(Players:GetPlayers()) do
+    player.CharacterAdded:Connect(function()
+        task.wait(0.5)
+        if ESP_ATIVO then
+            createESP(player)
+        end
+    end)
 end
 
 -- ==================== LOOP ====================
