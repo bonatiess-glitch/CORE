@@ -6,59 +6,42 @@ local Window = Rayfield:CreateWindow({
     LoadingSubtitle = "by 1_F0",
     ConfigurationSaving = {
         Enabled = false,
-        FolderName = nil, -- Create a custom folder for your hub/game
+        FolderName = nil,
         FileName = "Youtubeexamplehub"
     },
     Discord = {
         Enabled = false,
-        Invite = "vegax", -- The Discord invite code, do not include discord.gg/. E.g. discord.gg/ABCD would be ABCD
-        RememberJoins = true -- Set this to false to make them join the discord every time they load it up
+        Invite = "vegax",
+        RememberJoins = true
     },
-    KeySystem = false, -- Set this to true to use our key system
-    KeySettings = {
-        Title = "Gun Simulator | Key",
-        Subtitle = "Link in Discord Server",
-        Note = "Join Server From Misc Tab",
-        FileName = "examplehubkey", -- It is recommended to use something unique as other scripts using Rayfield may overwrite your key file
-        SaveKey = false, -- The user's key will be saved, and they will be unable to use your script without it
-        GrabKeyFromSite = false, -- If this is true, set Key below to the RAW site you would like Rayfield to get the key from
-        Key = {""} -- List of keys that will be accepted by the system, can be RAW file link
-    }
+    KeySystem = false
 })
 
-local MainTab = Window:CreateTab("🏠Home") -- Title, Image
-local MainSection = Maintab:CreateSection("Main")
+local MainTab = Window:CreateTab("🏠Home")
+local MainSection = MainTab:CreateSection("Main") -- corrigido
 
 Rayfield:Notify({
     Title = "Você executou o script!",
     Content = "💠 MainV3",
     Duration = 6.5,
-    Image = 4483362458,
-    Actions = {
-        Ignore = {
-            Name = "Okay!",
-            Callback = function()
-                print("The user tapped Okay!")
-            end
-        },
-    },
+    Image = 4483362458
 })
 
-local Button = MainTab:CreateButton({
+MainTab:CreateButton({
    Name = "Aimbot 🎯",
    Callback = function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/bonatzz/Aim.lua/refs/heads/main/Core.lua"))()
    end,
 })
-   
-local Slider = MainTab:CreateSlider({
+
+MainTab:CreateSlider({
    Name = "Walkspeed",
    Range = {0, 300},
    Increment = 1,
    Suffix = "Speed",
    CurrentValue = 16,
-   Flag = "Slider1", -- A flag is the identifier for the configuration file; make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Flag = "Slider1",
    Callback = function(Value)
-        game.Players.LocalPlayer.Caracter.Humanoid.WalkSpeed = (Value)
+        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value
    end,
 })
