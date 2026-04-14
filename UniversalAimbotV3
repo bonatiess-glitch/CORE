@@ -2,9 +2,9 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-	Name = "💠 UniversalAim V2",
-	LoadingTitle = "💠 Universal AimV2",
-	LoadingSubtitle = "by Zeppelin | Go! Go!",
+	Name = "💠 Universal Aimbot V3",
+	LoadingTitle = "💠 Universal Aimbot V3",
+	LoadingSubtitle = "by 1_F0 | Anti-Ban",
 	ConfigurationSaving = {Enabled = false},
 	KeySystem = false
 })
@@ -14,6 +14,7 @@ local HomeTab = Window:CreateTab("🏠 Home")
 local ConfigTab = Window:CreateTab("⚙️ Config")
 local PlayerTab = Window:CreateTab("🎮 Player")
 local MiscTab = Window:CreateTab("🧩 Misc")
+local ProtectionTab = Window:CreateTab("🛡️ Proteção")
 
 -- ==================== SERVIÇOS ====================
 local RunService = game:GetService("RunService")
@@ -29,6 +30,7 @@ local NOCLIP = false
 local FULLBRIGHT_ATIVO = false
 local INFINITE_JUMP = false
 local TARGET_LOCK = false
+local ANTI_BAN_ATIVO = true
 
 -- ==================== CONFIG ====================
 getgenv().AIM_FOV = 50
@@ -43,56 +45,137 @@ getgenv().TEAM_CHECK = false
 local esp_cache = {}
 local last_noclip_time = 0
 local last_observer_check = 0
-local observador_detectado = false
 
--- ==================== LIMPEZA DE RASTROS (SIMPLES) ====================
+-- ✅ SISTEMA ANTI-BAN (SÓ DETECTA O QUE IMPORTA)
+local antibanData = {
+	-- Admin: única coisa realmente detectável
+	adminDetectCount = 0,
+	lastAdminCheck = 0,
+	
+	isEscaping = false,
+}
+
+-- ==================== MONITOR SIMPLES E EFETIVO ====================
+
+local function monitorarAnomalias()
+	task.spawn(function()
+		while ANTI_BAN_ATIVO and not antibanData.isEscaping do
+			task.wait(2) -- Verifica a cada 2 segundos
+			
+			-- ÚNICA COISA QUE IMPORTA: Admin online observando
+			local adminOnline = 0
+			for _, player in ipairs(Players:GetPlayers()) do
+				if player ~= Players.LocalPlayer and not player.Character then
+					if player.Name:find("Admin") or player.Name:find("Developer") or 
+					   player.Name:find("Owner") or player.Name:find("Moderator") or
+					   player.UserId == 1 then
+						adminOnline = adminOnline + 1
+					end
+				end
+			end
+			
+			-- Se admin online e aimbot ativo = AMEAÇA REAL
+			if adminOnline > 0 and AIMBOT_ATIVO then
+				antibanData.adminDetectCount = antibanData.adminDetectCount + 1
+				print("⚠️ ADMIN DETECTADO: " .. adminOnline .. " | Count: " .. antibanData.adminDetectCount)
+				
+				-- Se admin tá lá por 2+ checks = reagir
+				if antibanData.adminDetectCount >= 2 then
+					antibanData.isEscaping = true
+					print("🚨 ADMIN OBSERVANDO! Server hop!")
+					
+					limparRapido()
+					task.wait(0.3)
+					serverHopRapido()
+					
+					-- Reset
+					antibanData.adminDetectCount = 0
+					task.wait(15)
+					antibanData.isEscaping = false
+				end
+			else
+				antibanData.adminDetectCount = 0
+			end
+		end
+	end)
+end
+
+-- ==================== ESCAPE INSTANTÂNEO ====================
+
+local function limparRapido()
+	task.spawn(function()
+		AIMBOT_ATIVO = false
+		ESP_ATIVO = false
+		NOCLIP = false
+		INFINITE_JUMP = false
+		FULLBRIGHT_ATIVO = false
+	end)
+	
+	task.spawn(function()
+		for player in pairs(esp_cache) do
+			if esp_cache[player] then
+				pcall(function() esp_cache[player]:Destroy() end)
+			end
+			esp_cache[player] = nil
+		end
+	end)
+	
+	task.spawn(function()
+		if getgenv().ORIGINAL_BRIGHTNESS then
+			Lighting.Brightness = getgenv().ORIGINAL_BRIGHTNESS
+			Lighting.ClockTime = getgenv().ORIGINAL_CLOCK_TIME
+			Lighting.FogEnd = getgenv().ORIGINAL_FOG_END
+		end
+	end)
+	
+	task.spawn(function()
+		pcall(function()
+			getgenv().AIMBOT_ATIVO = nil
+			getgenv().ESP_ATIVO = nil
+			getgenv().AIM_FOV = nil
+			getgenv().AIM_SMOOTH = nil
+		end)
+	end)
+end
+
+local function serverHopRapido()
+	print("⚡ SERVER HOP!")
+	task.wait(0.3)
+	
+	local teleportService = game:GetService("TeleportService")
+	pcall(function()
+		teleportService:Teleport(game.PlaceId, Players.LocalPlayer)
+	end)
+end
+
+-- ==================== RESTO DO CÓDIGO ====================
+
 local function limparRastros()
-	-- Remove só as variáveis suspeitas
 	pcall(function()
 		getgenv().AIMBOT_ATIVO = nil
 		getgenv().ESP_ATIVO = nil
 		getgenv().AIM_FOV = nil
 		getgenv().AIM_SMOOTH = nil
 	end)
-	
 	print("✅ Rastros limpos")
 end
 
--- ==================== DETECTOR DE OBSERVADORES (LEVE) ====================
 local function detectarObservador()
-
 	local currentTime = tick()
-	if currentTime - last_observer_check < 5 then
-		return observador_detectado
-	end
+	if currentTime - last_observer_check < 2 then return false end
 	last_observer_check = currentTime
 	
 	local nomesAdmin = {"Admin", "Developer", "Owner", "Moderator"}
-	
 	for _, player in ipairs(Players:GetPlayers()) do
 		if player ~= Players.LocalPlayer and not player.Character then
 			for _, nome in ipairs(nomesAdmin) do
-				if player.Name:find(nome) then
-					observador_detectado = true
-					return true
-				end
+				if player.Name:find(nome) then return true end
 			end
 		end
 	end
-	
-	observador_detectado = false
 	return false
 end
 
--- ==================== AUTO-PAUSE (SUAVE) ====================
-local function verificarEPausar()
-	if detectarObservador() and AIMBOT_ATIVO then
-		AIMBOT_ATIVO = false
-		print("⚠️ Admin detectado. Aimbot pausado.")
-	end
-end
-
--- ==================== AIMBOT ====================
 local function getClosestPlayerInFOV()
 	local nearest = nil
 	local last = math.huge
@@ -125,12 +208,10 @@ end
 
 local function aimAt(target)
 	if not target or not target.Character or not target.Character:FindFirstChild("Head") then return end
-	
 	local cf = CFrame.new(Cam.CFrame.Position, target.Character.Head.Position)
 	Cam.CFrame = Cam.CFrame:Lerp(cf, getgenv().AIM_SMOOTH)
 end
 
--- ==================== ESP ====================
 local function createESP(player)
 	if player == Players.LocalPlayer then return end
 	if not player.Character then return end
@@ -147,21 +228,17 @@ end
 
 local function removeESP(player)
 	if esp_cache[player] then
-		pcall(function()
-			esp_cache[player]:Destroy()
-		end)
+		pcall(function() esp_cache[player]:Destroy() end)
 		esp_cache[player] = nil
 	end
 end
 
--- ==================== FULLBRIGHT ====================
 local function enableFullbright()
 	if not getgenv().ORIGINAL_BRIGHTNESS then
 		getgenv().ORIGINAL_BRIGHTNESS = Lighting.Brightness
 		getgenv().ORIGINAL_CLOCK_TIME = Lighting.ClockTime
 		getgenv().ORIGINAL_FOG_END = Lighting.FogEnd
 	end
-	
 	Lighting.Brightness = 2
 	Lighting.ClockTime = 14
 	Lighting.FogEnd = 100000
@@ -175,10 +252,8 @@ local function disableFullbright()
 	end
 end
 
--- ==================== INFINITE JUMP ====================
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if gameProcessed then return end
-	
 	if input.KeyCode == Enum.KeyCode.Space and INFINITE_JUMP then
 		local char = Players.LocalPlayer.Character
 		if char and char:FindFirstChild("Humanoid") then
@@ -187,43 +262,32 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	end
 end)
 
--- ==================== PLAYER EVENTS ====================
 Players.PlayerAdded:Connect(function(player)
 	player.CharacterAdded:Connect(function()
 		task.wait(0.5)
-		if ESP_ATIVO then
-			createESP(player)
-		end
+		if ESP_ATIVO then createESP(player) end
 	end)
 end)
 
 Players.PlayerRemoving:Connect(function(player)
 	removeESP(player)
-	if getgenv().LOCKED_TARGET == player then
-		getgenv().LOCKED_TARGET = nil
-	end
+	if getgenv().LOCKED_TARGET == player then getgenv().LOCKED_TARGET = nil end
 end)
 
 for _, player in ipairs(Players:GetPlayers()) do
 	if player ~= Players.LocalPlayer then
 		player.CharacterAdded:Connect(function()
 			task.wait(0.5)
-			if ESP_ATIVO then
-				createESP(player)
-			end
+			if ESP_ATIVO then createESP(player) end
 		end)
 	end
 end
 
--- ==================== MAIN LOOP ====================
 RunService.RenderStepped:Connect(function()
-
-	-- AIMBOT
 	if AIMBOT_ATIVO then
-		verificarEPausar()
+		if detectarObservador() then AIMBOT_ATIVO = false print("⚠️ Admin detectado") return end
 		
 		local target = nil
-		
 		if TARGET_LOCK and getgenv().LOCKED_TARGET and getgenv().LOCKED_TARGET.Character then
 			target = getgenv().LOCKED_TARGET
 		else
@@ -235,20 +299,14 @@ RunService.RenderStepped:Connect(function()
 		end
 	end
 
-	-- ESP
 	if ESP_ATIVO then
 		for _, player in ipairs(Players:GetPlayers()) do
-			if player.Character then
-				createESP(player)
-			end
+			if player.Character then createESP(player) end
 		end
 	else
-		for player in pairs(esp_cache) do
-			removeESP(player)
-		end
+		for player in pairs(esp_cache) do removeESP(player) end
 	end
 
-	-- Noclip
 	if NOCLIP then
 		local currentTime = tick()
 		if currentTime - last_noclip_time >= 0.1 then
@@ -256,34 +314,26 @@ RunService.RenderStepped:Connect(function()
 			local char = Players.LocalPlayer.Character
 			if char then
 				for _, v in pairs(char:GetDescendants()) do
-					if v:IsA("BasePart") then
-						v.CanCollide = false
-					end
+					if v:IsA("BasePart") then v.CanCollide = false end
 				end
 			end
 		end
 	end
-
 end)
 
--- ==================== HOME TAB ====================
+-- ==================== UI ====================
 HomeTab:CreateToggle({
 	Name = "🎯 Aimbot",
 	CurrentValue = false,
-	Callback = function(Value)
-		AIMBOT_ATIVO = Value
-	end,
+	Callback = function(Value) AIMBOT_ATIVO = Value end,
 })
 
 HomeTab:CreateToggle({
 	Name = "👁️ ESP",
 	CurrentValue = false,
-	Callback = function(Value)
-		ESP_ATIVO = Value
-	end,
+	Callback = function(Value) ESP_ATIVO = Value end,
 })
 
--- ==================== CONFIG TAB ====================
 ConfigTab:CreateSection("⚙️ Aimbot")
 
 ConfigTab:CreateSlider({
@@ -291,9 +341,7 @@ ConfigTab:CreateSlider({
 	Range = {10, 300},
 	Increment = 1,
 	CurrentValue = 50,
-	Callback = function(Value)
-		getgenv().AIM_FOV = Value
-	end,
+	Callback = function(Value) getgenv().AIM_FOV = Value end,
 })
 
 ConfigTab:CreateSlider({
@@ -301,17 +349,13 @@ ConfigTab:CreateSlider({
 	Range = {1, 100},
 	Increment = 1,
 	CurrentValue = 20,
-	Callback = function(Value)
-		getgenv().AIM_SMOOTH = Value / 100
-	end,
+	Callback = function(Value) getgenv().AIM_SMOOTH = Value / 100 end,
 })
 
 ConfigTab:CreateToggle({
 	Name = "🎯 Team Check",
 	CurrentValue = false,
-	Callback = function(Value)
-		getgenv().TEAM_CHECK = Value
-	end,
+	Callback = function(Value) getgenv().TEAM_CHECK = Value end,
 })
 
 ConfigTab:CreateSection("🛡️ Proteção")
@@ -321,15 +365,15 @@ ConfigTab:CreateButton({
 	Callback = function()
 		limparRastros()
 		Rayfield:Notify({
-			Title = "✅ Rastros Limpos!",
-			Content = "Variáveis removidas do getenv",
+			Title = "✅ Limpo!",
+			Content = "Variáveis removidas",
 			Duration = 2,
 			Image = 4483362458,
 		})
 	end,
 })
 
-ConfigTab:CreateSection("🎮 Players")
+ConfigTab:CreateSection("📊 Players")
 
 ConfigTab:CreateDropdown({
 	Name = "Select Target",
@@ -363,12 +407,9 @@ ConfigTab:CreateDropdown({
 ConfigTab:CreateToggle({
 	Name = "🔒 Target Lock",
 	CurrentValue = false,
-	Callback = function(Value)
-		TARGET_LOCK = Value
-	end,
+	Callback = function(Value) TARGET_LOCK = Value end,
 })
 
--- ==================== PLAYER TAB ====================
 PlayerTab:CreateSection("⚡ Movimento")
 
 PlayerTab:CreateSlider({
@@ -387,20 +428,15 @@ PlayerTab:CreateSlider({
 PlayerTab:CreateToggle({
 	Name = "♾️ Infinite Jump",
 	CurrentValue = false,
-	Callback = function(Value)
-		INFINITE_JUMP = Value
-	end,
+	Callback = function(Value) INFINITE_JUMP = Value end,
 })
 
--- ==================== MISC TAB ====================
 MiscTab:CreateSection("🎮 Utilities")
 
 MiscTab:CreateToggle({
 	Name = "👻 Noclip",
 	CurrentValue = false,
-	Callback = function(Value)
-		NOCLIP = Value
-	end,
+	Callback = function(Value) NOCLIP = Value end,
 })
 
 MiscTab:CreateToggle({
@@ -408,19 +444,31 @@ MiscTab:CreateToggle({
 	CurrentValue = false,
 	Callback = function(Value)
 		FULLBRIGHT_ATIVO = Value
-		if Value then
-			enableFullbright()
-		else
-			disableFullbright()
-		end
+		if Value then enableFullbright() else disableFullbright() end
 	end,
 })
 
--- ==================== FINALIZACAO ====================
-print("✅ Hub carregada com sucesso!")
+ProtectionTab:CreateSection("🛡️ Proteção Simples")
+
+ProtectionTab:CreateToggle({
+	Name = "🚨 Detectar Admin",
+	CurrentValue = true,
+	Callback = function(Value) ANTI_BAN_ATIVO = Value end,
+})
+
+ProtectionTab:CreateLabel("Monitora: Admin Online")
+ProtectionTab:CreateLabel("Se admin vê = Server Hop")
+ProtectionTab:CreateLabel("Simples e confiável!")
+
+-- ==================== START ====================
+print("✅ Hub carregada!")
+print("🛡️ Proteção ATIVA (Admin Detection)")
+
+monitorarAnomalias()
+
 Rayfield:Notify({
-	Title = "✅ Hub Carregada!",
-	Content = "Universal Aimbot V3 - Otimizado",
+	Title = "✅ Carregado!",
+	Content = "Proteção Contra Admin Ativa",
 	Duration = 5,
 	Image = 4483362458,
 })
