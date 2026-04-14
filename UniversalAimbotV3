@@ -2,9 +2,9 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-	Name = "💠 Universal Aimbot V3",
-	LoadingTitle = "💠 Universal Aimbot V3",
-	LoadingSubtitle = "by 1_F0 | Anti-Ban",
+	Name = "💠 Universal Aimbot",
+	LoadingTitle = "💠 Universal Aimbot",
+	LoadingSubtitle = "Bypass V1",
 	ConfigurationSaving = {Enabled = false},
 	KeySystem = false
 })
